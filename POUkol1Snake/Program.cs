@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 
 /*
  Vezměte tento lagacy kód známé hry snake. 
@@ -27,17 +24,22 @@ namespace Snake
     class Program
     {
         static Pixel snakeHead;
+        static Pixel berry;
+
         static int screenWidth;
         static int screenHeight;
+
         static Random randomNumber;
+
         static int score;
         static int gameOver;
-        static string movement;
-        static List<int> snakeBodyPositionXList = new List<int>();
-        static List<int> snakeBodyPositionYList = new List<int>();
-        static int berryPositionX;
-        static int berryPositionY;
+
+        static string movementDirection;
+
+        static List<Pixel> snakeBodyPositionsList = new List<Pixel>();
+
         static bool buttonPressed;
+
         static DateTime startTime;
         static DateTime passedTime;
 
@@ -46,7 +48,7 @@ namespace Snake
             Initialize();
             #region GameLoop
             while (true)
-            {               
+            {
                 UpdateState();
                 if (gameOver == 1)
                 {
@@ -62,7 +64,7 @@ namespace Snake
         {
             PreparePlayground();
 
-            InitializeGameStatusAndScore();
+            SetGameStatusAndScore();
 
             CreateSnake();
 
@@ -77,43 +79,58 @@ namespace Snake
             screenWidth = Console.WindowWidth;
             screenHeight = Console.WindowHeight;
 
+            berry = new Pixel(0, 0, ConsoleColor.Cyan);
+
             randomNumber = new Random();
         }
-        public static void InitializeGameStatusAndScore()
+        public static void SetGameStatusAndScore()
         {
             score = 0;
             gameOver = 0;
         }
         public static void CreateSnake()
         {
-            snakeHead = new Pixel();
-            snakeHead.xPosition = screenWidth / 2;
-            snakeHead.yPosition = screenHeight / 2;
-
-            snakeHead.color = ConsoleColor.Red;
-
-            movement = "RIGHT";
-
-            snakeBodyPositionXList = new List<int>();
-            snakeBodyPositionYList = new List<int>();
+            snakeHead = new Pixel(screenWidth / 2, screenHeight / 2, ConsoleColor.Red);
+            movementDirection = "RIGHT";
+            snakeBodyPositionsList = new List<Pixel>();
             buttonPressed = false;
         }
         #endregion
         public static void GenerateBerry()
         {
-            berryPositionX = randomNumber.Next(1, screenWidth - 2);
-            berryPositionY = randomNumber.Next(1, screenHeight - 2);
+            berry.PositionX = randomNumber.Next(1, screenWidth - 2);
+            berry.PositionY = randomNumber.Next(1, screenHeight - 2);
 
-            
+
             //BUG - BERRY COULD SPAWN INSIDE SNAKE'S BODY
             //FIXED - WE CHECK IF COORDINATES ARE DIFFERENT THAN ANY OF THE BODY COORDINATES, IF NOT, GENERATE NEW COORDINATES
-            while (snakeBodyPositionXList.Contains(berryPositionX) && snakeBodyPositionYList.Contains(berryPositionY))
+            while (PixelListContainsPixel(snakeBodyPositionsList, berry))
             {
-                    berryPositionX = randomNumber.Next(1, screenWidth - 2);
-                    berryPositionY = randomNumber.Next(1, screenHeight - 2);
+                berry.PositionX = randomNumber.Next(1, screenWidth - 2);
+                berry.PositionY = randomNumber.Next(1, screenHeight - 2);
             }
-        }      
-        
+        }
+        public static bool PixelListContainsPixel(List<Pixel> pixelList, Pixel pixel)
+        {
+            foreach (Pixel listPixel in pixelList)
+            {
+                if (listPixel.PositionX == pixel.PositionX && listPixel.PositionY == pixel.PositionY)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+
+        public static bool PixelOverlapsPixel(Pixel pixel1, Pixel pixel2)
+        {
+            if (pixel1.PositionX == pixel2.PositionX && pixel1.PositionY == pixel2.PositionY)
+            {
+                return true;
+            }
+            return false;
+        }
 
         public static void UpdateState()
         {
@@ -125,14 +142,14 @@ namespace Snake
         #region UpdateState functions
         public static void CheckSnakeBorderCollision()
         {
-            if (snakeHead.xPosition == screenWidth - 1 || snakeHead.xPosition == 0 || snakeHead.yPosition == screenHeight - 1 || snakeHead.yPosition == 0)
+            if (snakeHead.PositionX == screenWidth - 1 || snakeHead.PositionX == 0 || snakeHead.PositionY == screenHeight - 1 || snakeHead.PositionY == 0)
             {
                 gameOver = 1;
-            }            
+            }
         }
         public static void CheckSnakeBerryCollision()
         {
-            if (berryPositionX == snakeHead.xPosition && berryPositionY == snakeHead.yPosition)
+            if (PixelOverlapsPixel(snakeHead, berry))
             {
                 score++;
                 GenerateBerry();
@@ -140,12 +157,9 @@ namespace Snake
         }
         public static void CheckSnakeBodyCollision()
         {
-            for (int i = 0; i < snakeBodyPositionXList.Count(); i++)
+            if (PixelListContainsPixel(snakeBodyPositionsList, snakeHead))
             {
-                if (snakeBodyPositionXList[i] == snakeHead.xPosition && snakeBodyPositionYList[i] == snakeHead.yPosition)
-                {
-                    gameOver = 1;
-                }
+                gameOver = 1;
             }
         }
         #endregion
@@ -168,24 +182,24 @@ namespace Snake
                 if (Console.KeyAvailable)
                 {
                     ConsoleKeyInfo pressedKey = Console.ReadKey(true);
-                    if (pressedKey.Key.Equals(ConsoleKey.UpArrow) && movement != "DOWN" && !buttonPressed)
+                    if (pressedKey.Key.Equals(ConsoleKey.UpArrow) && movementDirection != "DOWN" && !buttonPressed)
                     {
-                        movement = "UP";
+                        movementDirection = "UP";
                         buttonPressed = true;
                     }
-                    if (pressedKey.Key.Equals(ConsoleKey.DownArrow) && movement != "UP" && !buttonPressed)
+                    if (pressedKey.Key.Equals(ConsoleKey.DownArrow) && movementDirection != "UP" && !buttonPressed)
                     {
-                        movement = "DOWN";
+                        movementDirection = "DOWN";
                         buttonPressed = true;
                     }
-                    if (pressedKey.Key.Equals(ConsoleKey.LeftArrow) && movement != "RIGHT" && !buttonPressed)
+                    if (pressedKey.Key.Equals(ConsoleKey.LeftArrow) && movementDirection != "RIGHT" && !buttonPressed)
                     {
-                        movement = "LEFT";
+                        movementDirection = "LEFT";
                         buttonPressed = true;
                     }
-                    if (pressedKey.Key.Equals(ConsoleKey.RightArrow) && movement != "LEFT" && !buttonPressed)
+                    if (pressedKey.Key.Equals(ConsoleKey.RightArrow) && movementDirection != "LEFT" && !buttonPressed)
                     {
-                        movement = "RIGHT";
+                        movementDirection = "RIGHT";
                         buttonPressed = true;
                     }
                 }
@@ -193,34 +207,32 @@ namespace Snake
         }
         public static void AddNewSnakeCoordinate()
         {
-            snakeBodyPositionXList.Add(snakeHead.xPosition);
-            snakeBodyPositionYList.Add(snakeHead.yPosition);
+            snakeBodyPositionsList.Add(new Pixel(snakeHead.PositionX, snakeHead.PositionY, ConsoleColor.Green));
         }
         public static void DetermineDirection()
         {
-            switch (movement)
+            switch (movementDirection)
             {
                 case "UP":
-                    snakeHead.yPosition--;
+                    snakeHead.PositionY--;
                     break;
                 case "DOWN":
-                    snakeHead.yPosition++;
+                    snakeHead.PositionY++;
                     break;
                 case "LEFT":
-                    snakeHead.xPosition--;
+                    snakeHead.PositionX--;
                     break;
                 case "RIGHT":
-                    snakeHead.xPosition++;
+                    snakeHead.PositionX++;
                     break;
             }
         }
         public static void RemoveOldSnakeCoordinate()
         {
 
-            if (snakeBodyPositionXList.Count() > score + 5)
+            if (snakeBodyPositionsList.Count() > score + 5)
             {
-                snakeBodyPositionXList.RemoveAt(0);
-                snakeBodyPositionYList.RemoveAt(0);
+                snakeBodyPositionsList.RemoveAt(0);
             }
         }
         #endregion
@@ -234,10 +246,11 @@ namespace Snake
         #region Render functions
         public static void DrawSnakeBody()
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            for (int i = 0; i < snakeBodyPositionXList.Count(); i++)
+
+            for (int i = 0; i < snakeBodyPositionsList.Count(); i++)
             {
-                Console.SetCursorPosition(snakeBodyPositionXList[i], snakeBodyPositionYList[i]);
+                Console.ForegroundColor = snakeBodyPositionsList[i].Color;
+                Console.SetCursorPosition(snakeBodyPositionsList[i].PositionX, snakeBodyPositionsList[i].PositionY);
                 Console.Write("■");
             }
         }
@@ -248,35 +261,31 @@ namespace Snake
             {
                 Console.SetCursorPosition(i, 0);
                 Console.Write("■");
-            }
-            for (int i = 0; i < screenWidth; i++)
-            {
                 Console.SetCursorPosition(i, screenHeight - 1);
                 Console.Write("■");
             }
+
             for (int i = 0; i < screenHeight; i++)
             {
                 Console.SetCursorPosition(0, i);
                 Console.Write("■");
-            }
-            for (int i = 0; i < screenHeight; i++)
-            {
                 Console.SetCursorPosition(screenWidth - 1, i);
                 Console.Write("■");
             }
+
         }
 
         public static void DrawSnakeHead()
         {
-            Console.SetCursorPosition(snakeHead.xPosition, snakeHead.yPosition);
-            Console.ForegroundColor = snakeHead.color;
+            Console.SetCursorPosition(snakeHead.PositionX, snakeHead.PositionY);
+            Console.ForegroundColor = snakeHead.Color;
             Console.Write("■");
         }
 
         public static void DrawBerry()
         {
-            Console.SetCursorPosition(berryPositionX, berryPositionY);
-            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.SetCursorPosition(berry.PositionX, berry.PositionY);
+            Console.ForegroundColor = berry.Color;
             Console.Write("■");
         }
         #endregion
@@ -289,11 +298,18 @@ namespace Snake
     }
     class Pixel
     {
-        public int xPosition { get; set; }
-        public int yPosition { get; set; }
-        public ConsoleColor color { get; set; }
+        public int PositionX { get; set; }
+        public int PositionY { get; set; }
+        public ConsoleColor Color { get; set; }
+
+        public Pixel(int positionX, int positionY, ConsoleColor color)
+        {
+            PositionX = positionX;
+            PositionY = positionY;
+            Color = color;
+        }
     }
 
 }
-    
+
 
